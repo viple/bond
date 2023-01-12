@@ -45,7 +45,7 @@ if api.connect('117.184.140.156', 7709):
 category=9
 # 设置开始结束时间
 start_date = datetime(2020,1,1)
-end_date = datetime(2023,1,6)
+end_date = datetime(2023,1,13)
 
 # 从东方财富获取数据，单次返回当前交易时刻的所有可转债数据
 bond_info = ak.bond_zh_cov()
@@ -103,26 +103,29 @@ def get_dars(code,name,market,category,startTime=start_date,endTime=end_date):
         data = data.set_index('datetime')
         data.index = pd.to_datetime(data.index)
         data = data.sort_index()
-        date = data.loc[startTime:endTime]
         #print(data.head())
         data['name'] = name
+        data['code'] = code
         #计算涨幅
         data['rise'] = ((data['close']-data['close'].shift(1))/data['close'].shift(1))
         data['rise'][0] = data['close'][0]/100-1
         #计算振幅
         data['Amp'] = (data['high']-data['low'])/data['close'].shift(1)
         data['Amp'][0] = (data['high'][0]-data['low'][0])/100
-        data =data[['name','open','high','low','close','vol','amount','rise','Amp']]
+        data =data[['name','code','open','high','low','close','vol','amount','rise','Amp']]
+        #对data进行时间切片，截取2020之后的
+        data = data.loc[startTime:endTime]
         #print(data.index)        
         if len(data)>=1:
             path = create_path(code)
-            data.to_csv(path,index=True,mode='w',encoding='gbk')
-            list = data.index.date
-            for i in list:
-                datey = str(i)
-                #print(datey)
-                pathy = create_path(datey)
-                data.to_csv(pathy,index=True,mode='w',encoding='gbk')
+            data.to_csv(path,index=True,mode='w',encoding='utf-8')
+            data.to_csv(r'C:\Users\super\Desktop\100day\all_stock_candle\bond\2020-01-01\汇总.csv',index=True,header=0,mode='a',encoding='utf-8')
+            # list = data.index.date
+            # for i in list:
+            #     datey = str(i)
+            #     #print(datey)
+            #     pathy = create_path(datey)
+            #     data['datetime':'i'+''+'15:00'].to_csv(pathy,index=True,mode='a',encoding='utf-8')
 # 设置主函数
 if __name__ == '__main__':
     for i in range (len(para_list)):
