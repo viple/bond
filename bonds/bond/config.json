@@ -1,0 +1,21 @@
+{
+    "tdx": {
+        "ip": "117.184.140.156",
+        "port": 7709,
+        "multithread": true,
+        "heartbeat": true,
+        "auto_retry": true
+    },
+    "data": {
+        "start_date": "2020-01-01",
+        "end_date": "2026-06-10",
+        "category": 9,
+        "base_path": "./all_stock_candle/bond"
+    },
+    "download": {
+        "save_individual_csv": true,
+        "individual_csv_mode": "w",
+        "save_summary_csv": true,
+        "summary_csv_path": "./all_stock_candle/bond/summary.csv"
+    }
+}
