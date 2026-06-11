@@ -8,7 +8,7 @@
     },
     "data": {
         "start_date": "2020-01-01",
-        "end_date": "2026-06-10",
+        "end_date": "latest",
         "category": 9,
         "base_path": "./all_stock_candle/bond"
     },
@@ -17,5 +17,27 @@
         "individual_csv_mode": "w",
         "save_summary_csv": true,
         "summary_csv_path": "./all_stock_candle/bond/summary.csv"
+    },
+    "features": {
+        "incremental_update": true,
+        "multi_thread": true,
+        "max_workers": 5,
+        "use_parquet": false,
+        "use_sqlite": false,
+        "sqlite_db_path": "./bonds.db",
+        "use_technical_indicators": true,
+        "fallback_to_akshare": true,
+        "notify_email": false,
+        "notify_wecom": false
+    },
+    "email_config": {
+        "smtp_server": "smtp.qq.com",
+        "smtp_port": 465,
+        "from_addr": "",
+        "password": "",
+        "to_addr": ""
+    },
+    "wecom_config": {
+        "webhook_key": ""
     }
 }
