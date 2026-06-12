@@ -25,6 +25,7 @@ import numpy as np
 import akshare as ak
 from pytdx.hq import TdxHq_API
 import requests
+import re
 
 
 # ========================= TDX IP 连接池 =========================
@@ -75,6 +76,7 @@ def load_config(config_path=None):
     global _CONFIG
     if config_path is None:
         config_path = os.path.join(os.path.dirname(__file__), "config.json")
+    _script_dir = os.path.dirname(os.path.abspath(__file__))
     default_config = {
         "tdx": {
             "ip": "115.238.90.165",
@@ -87,21 +89,21 @@ def load_config(config_path=None):
             "start_date": "2020-01-01",
             "end_date": "latest",
             "category": 9,
-            "base_path": "./all_stock_candle/bond"
+            "base_path": os.path.join(_script_dir, "..", "all_stock_candle", "bond")
         },
         "download": {
             "save_individual_csv": True,
             "individual_csv_mode": "w",
             "save_summary_csv": True,
-            "summary_csv_path": "./all_stock_candle/bond/summary.csv"
+            "summary_csv_path": os.path.join(_script_dir, "..", "all_stock_candle", "bond", "summary.csv")
         },
         "features": {
             "incremental_update": True,
             "multi_thread": True,
             "max_workers": 5,
             "use_parquet": False,
-            "use_sqlite": False,
-            "sqlite_db_path": "./bonds.db",
+            "use_sqlite": True,
+            "sqlite_db_path": os.path.join(_script_dir, "..", "bonds.db"),
             "use_technical_indicators": True,
             "fallback_to_akshare": True,
             "notify_email": False,
@@ -404,19 +406,45 @@ def get_incremental_data(market, code, name, api, start_date, end_date, existing
 
 
 # ========================= 数据存储 =========================
-def save_individual_data(df, code):
-    """保存单只可转债数据到 CSV 或 Parquet"""
+def _build_bond_filename(code, name=None):
+    """构建包含债券名称的文件名（不含扩展名），名称中的特殊字符会被替换。"""
+    if name:
+        safe_name = re.sub(r'[\\/*?:"<>| ]', "_", str(name))
+        return f"{code}_{safe_name}"
+    return code
+
+
+def _find_existing_bond_file(base_path, code, name=None):
+    """查找已有的债券数据文件。优先 {code}_{name}.csv，回退 {code}.csv。"""
+    # 优先新格式
+    filename = _build_bond_filename(code, name)
+    for ext in (".csv", ".parquet"):
+        path = os.path.join(base_path, f"{filename}{ext}")
+        if os.path.exists(path):
+            return path
+    # 回退旧格式
+    for ext in (".csv", ".parquet"):
+        path = os.path.join(base_path, f"{code}{ext}")
+        if os.path.exists(path):
+            return path
+    # 默认返回新格式路径（用于新建）
+    return os.path.join(base_path, f"{filename}.csv")
+
+
+def save_individual_data(df, code, name=None):
+    """保存单只可转债数据到 CSV 或 Parquet，文件名包含债券名称。"""
     cfg = get_config()
     if not cfg["download"].get("save_individual_csv", True):
         return None
     base_path = cfg["data"]["base_path"]
     ensure_dir(base_path)
 
+    filename = _build_bond_filename(code, name)
     if cfg["features"].get("use_parquet", False):
-        file_path = os.path.join(base_path, f"{code}.parquet")
+        file_path = os.path.join(base_path, f"{filename}.parquet")
         df.to_parquet(file_path, index=True)
     else:
-        file_path = os.path.join(base_path, f"{code}.csv")
+        file_path = os.path.join(base_path, f"{filename}.csv")
         df.to_csv(file_path, encoding="utf-8")
     return file_path
 
@@ -500,10 +528,7 @@ def download_task(market, code, name, start_date, end_date, progress_idx, total)
         existing_df = None
         if cfg["features"].get("incremental_update", True):
             base_path = cfg["data"]["base_path"]
-            if cfg["features"].get("use_parquet", False):
-                file_path = os.path.join(base_path, f"{code}.parquet")
-            else:
-                file_path = os.path.join(base_path, f"{code}.csv")
+            file_path = _find_existing_bond_file(base_path, code, name)
             if os.path.exists(file_path):
                 try:
                     if file_path.endswith(".parquet"):
@@ -518,7 +543,7 @@ def download_task(market, code, name, start_date, end_date, progress_idx, total)
         if df is None or df.empty:
             return (code, False, "无数据")
 
-        save_individual_data(df, code)
+        save_individual_data(df, code, name)
         save_summary_data(df)
         save_to_sqlite(df, code)
 
@@ -603,7 +628,7 @@ def run_download(start_date=None, end_date=None):
 
                 existing_df = None
                 if cfg["features"].get("incremental_update", True):
-                    file_path = os.path.join(cfg["data"]["base_path"], f"{code}.csv")
+                    file_path = _find_existing_bond_file(cfg["data"]["base_path"], code, name)
                     if os.path.exists(file_path):
                         try:
                             existing_df = pd.read_csv(file_path, index_col=0, parse_dates=True)
@@ -612,7 +637,7 @@ def run_download(start_date=None, end_date=None):
 
                 df = get_incremental_data(market, code, name, api, start_date, end_date, existing_df)
                 if df is not None and not df.empty:
-                    save_individual_data(df, code)
+                    save_individual_data(df, code, name)
                     save_summary_data(df)
                     save_to_sqlite(df, code)
                     success_count += 1

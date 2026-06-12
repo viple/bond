@@ -1,4 +1,4 @@
-﻿# 可转债数据下载器 (Convertible Bond Data Downloader)
+# 可转债数据下载器 (Convertible Bond Data Downloader)
 
 从通达信 TDX + AkShare 获取 A 股可转债日线数据，支持增量更新、多线程下载、技术指标计算、Web 可视化。
 
@@ -9,10 +9,16 @@ bonds/
 ├── run.py                    # 统一入口
 ├── requirements.txt          # Python 依赖
 ├── .gitignore
+├── all_stock_candle/         # 可转债日线数据（CSV / Parquet）
+│   └── bond/
+│       ├── {code}_{name}.csv # 单只可转债文件
+│       └── summary.csv       # 汇总数据
+├── bonds.db                  # SQLite 数据库（启用时自动生成）
 ├── config.json               # 项目配置文件
 ├── bond/
 │   ├── bond.py               # 原始版本（保留参考）
 │   ├── bond_downloader.py    # 增强版下载器（核心）
+│   ├── from pytdx.py         # IP 测速 + 优选
 │   └── config.json           # 下载器配置文件
 └── web/
     ├── app.py                # Flask Web 服务
@@ -59,4 +65,7 @@ python run.py --web --port 8080
 - **备用数据源**：通达信无数据时自动切换 AkShare
 - **Web 界面**：实时进度查看 + 数据预览
 - **通知推送**：支持邮件/企业微信通知下载完成
-- **多种存储**：CSV / Parquet / SQLite
+- **多种存储**：CSV（文件名含债券名称）/ Parquet / SQLite（默认启用）
+
+## 数据存储
+- CSV 文件保存在 \ll_stock_candle/bond/\，文件名格式 \{code}_{名称}.csv- SQLite 数据库默认启用，存储在 \onds.db- Parquet 可在配置中开启，与 CSV 使用相同命名规则
